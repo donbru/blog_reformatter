@@ -7,6 +7,11 @@ local_feed_xml_path = "C:/Users/dbrue/Documents/GitHub/blog_reformatter/FullBlog
 local_feed_xml_filename = "feed.xml"
 local_image_path = "C:/Users/dbrue/Documents/GitHub/blog_reformatter/FullBlogDownload_Sept2026/Takeout/Blogger/Albums/The DEB Log"
 
+feed_xml_encoding = "UTF-8"
+feed_xml_root_element_name = "xml"
+feed_xml_child_element_name = "feed"
+feed_xml_entry_element_name = "entry"
+
 
 '''
 Find tags, given the tag name and the attribute containing a possible jpg file reference
@@ -15,8 +20,12 @@ Replace the jpg file URI with a local filename and return that value
 def FindAndReplaceImageReference(tag, image_tag_attribute_names):
     for attrib_name in image_tag_attribute_names:
 
+        # extract the name of any attributes of the current tag 
+        # that match the given attribute name
         image_reference = tag.get(attrib_name)
 
+        # if the attribute's value ends with an image type, get its URI
+        # and change it to point to a local file instead
         if image_reference.endswith('jpg'):
             #get file name from end, work backwards to find last /
             last_slash_index = image_reference.rfind('/')
@@ -27,16 +36,20 @@ def FindAndReplaceImageReference(tag, image_tag_attribute_names):
     return False, '', ''
 
 '''
-method comment
+Get all <entry> elements from the input feed.xml file.
+This a fixed format, no need to try to parameterize or make this configurable
 '''
 def GetEntries(blog_path):
-    with open(blog_path, 'r', encoding="UTF-8") as f:
+    with open(blog_path, 'r', encoding=feed_xml_encoding) as f:
         data = f.read()
 
-    bs_data = BeautifulSoup(data, "xml")
-    feed_element = bs_data.find('feed')
+    # extract root and first child elements
+    bs_data = BeautifulSoup(data, feed_xml_root_element_name)
+    feed_element = bs_data.find(feed_xml_child_element_name)
 
-    return feed_element.find_all('entry')
+    # return a list of all <entry> elements
+    return feed_element.find_all(feed_xml_entry_element_name)
+
 
 
 '''
@@ -53,14 +66,14 @@ def ReplaceImageTags(content):
     <a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhAQXGYT0ioQlTgPx3wpPmiBmiBW57QFXyl-GH_daQ1x0OgXbtMAaO_AOKAEa1soIJ4G6FXMm173hHmqs6mL2gjlbwfDVGMUvadQy5flBCo7DIT-Ow4Zky8YNetnEKQWQ875yn7WUkK_fM/s1600/familyAugust2014.jpg" imageanchor="1" >
     '''
 
-    #find an image name, extract the file name from the end of the href string, then replace
-    #that string with the local file path. 
-    #Find and following to the end of the double quotes "<a href =/""
-
+    # read the XML file into an object using BeautifulSoup
     soup = BeautifulSoup(content, features='lxml')
 
     #if any <a> or <img> tags in the content, replace the hrefs/src of the image files
     relevant_tags = soup.find_all('a') + soup.find_all('img')
+
+    # pass each found tag into a method to locate image references, if any, and pass back the
+    # appropriate local file name
     for a_tag in relevant_tags:
         modified, image_reference, new_reference = FindAndReplaceImageReference(a_tag, ['href', 'src'])
         if modified:
@@ -70,20 +83,22 @@ def ReplaceImageTags(content):
 
 def ProcessBlogArchive(blog_path):
    
-    all_entries = []
+    prepared_entries = []
 
-    for entr in GetEntries(blog_path)
+    input_entries = GetEntries(blog_path)
+
+    for entr in input_entries:
         try:
             content = entr.content.text
             title = entr.title.text
             date_published = entr.published.text
             reformatted_content = ReplaceImageTags(content)
 
-            all_entries.append(BlogEntry(title, reformatted_content, date_published))
+            prepared_entries.append(BlogEntry(title, reformatted_content, date_published))
         except: #was except: TypeError, removed to help debugging
             continue
 
-    for en in all_entries:
+    for en in prepared_entries:
         en.ConstructHtmlFile()
 
 def main():
