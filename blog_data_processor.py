@@ -24,6 +24,9 @@ def FindAndReplaceImageReference(tag, image_tag_attribute_names):
         # that match the given attribute name
         image_reference = tag.get(attrib_name)
 
+        if image_reference == None:
+            continue
+
         # if the attribute's value ends with an image type, get its URI
         # and change it to point to a local file instead
         if image_reference.endswith('jpg'):
@@ -87,7 +90,7 @@ def ProcessBlogArchive(blog_path):
 
     input_entries = GetEntries(blog_path)
 
-    for entr in input_entries:
+    for index, entr in enumerate(input_entries):
         try:
             content = entr.content.text
             title = entr.title.text
@@ -96,7 +99,10 @@ def ProcessBlogArchive(blog_path):
 
             prepared_entries.append(BlogEntry(title, reformatted_content, date_published))
         except: #was except: TypeError, removed to help debugging
+            print("in exception handler, item: " + str(index))
             continue
+
+        
 
     for en in prepared_entries:
         en.ConstructHtmlFile()
