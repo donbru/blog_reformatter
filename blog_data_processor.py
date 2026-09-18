@@ -2,15 +2,31 @@ import requests
 from bs4 import BeautifulSoup
 from blog_entry import BlogEntry
 from pprint import pprint
+import configparser
 
-local_feed_xml_path = "C:/Users/dbrue/Documents/GitHub/blog_reformatter/FullBlogDownload_Sept2026/Takeout/Blogger/Blogs/TheDEBLog"
-local_feed_xml_filename = "feed.xml"
-local_image_path = "C:/Users/dbrue/Documents/GitHub/blog_reformatter/FullBlogDownload_Sept2026/Takeout/Blogger/Albums/The DEB Log"
+# local_feed_xml_path = "C:/Users/dbrue/Documents/GitHub/blog_reformatter/FullBlogDownload_Sept2026/Takeout/Blogger/Blogs/TheDEBLog"
+# local_feed_xml_filename = "feed.xml"
+# local_image_path = "C:/Users/dbrue/Documents/GitHub/blog_reformatter/FullBlogDownload_Sept2026/Takeout/Blogger/Albums/The DEB Log"
 
-feed_xml_encoding = "UTF-8"
-feed_xml_root_element_name = "xml"
-feed_xml_child_element_name = "feed"
-feed_xml_entry_element_name = "entry"
+# feed_xml_encoding = "UTF-8"
+# feed_xml_root_element_name = "xml"
+# feed_xml_child_element_name = "feed"
+# feed_xml_entry_element_name = "entry"
+
+def ReadConfigValues():
+    config = configparser.ConfigParser()
+    config.read('blog_data_processor.config')
+    return {
+        'local_feed_xml_path' : config.get('Files', 'local_feed_xml_path'),
+        'local_feed_xml_filename' : config.get('Files', 'local_feed_xml_filename'),
+        'local_image_path' : config.get('Files', 'local_image_path'),
+        'feed_xml_encoding' : config.get('Input', 'feed_xml_encoding'),
+        'feed_xml_root_element_name' : config.get('Input', 'feed_xml_root_element_name'),
+        'feed_xml_child_element_name' : config.get('Input', 'feed_xml_child_element_name'),
+        'feed_xml_entry_element_name' : config.get('Input', 'feed_xml_entry_element_name'),
+    }
+
+config_values = ReadConfigValues()
 
 
 '''
@@ -32,7 +48,7 @@ def FindAndReplaceImageReference(tag, image_tag_attribute_names):
         if image_reference.endswith('jpg'):
             #get file name from end, work backwards to find last /
             last_slash_index = image_reference.rfind('/')
-            new_file_name = local_image_path + image_reference[last_slash_index:len(image_reference)] 
+            new_file_name = config_values['local_image_path'] + image_reference[last_slash_index:len(image_reference)] 
             return True, image_reference, new_file_name
 
     # didn't do anything above or we would have returned already    
@@ -43,15 +59,15 @@ Get all <entry> elements from the input feed.xml file.
 This a fixed format, no need to try to parameterize or make this configurable
 '''
 def GetEntries(blog_path):
-    with open(blog_path, 'r', encoding=feed_xml_encoding) as f:
+    with open(blog_path, 'r', encoding = config_values['feed_xml_encoding']) as f:
         data = f.read()
 
     # extract root and first child elements
-    bs_data = BeautifulSoup(data, feed_xml_root_element_name)
-    feed_element = bs_data.find(feed_xml_child_element_name)
+    bs_data = BeautifulSoup(data, config_values['feed_xml_root_element_name'])
+    feed_element = bs_data.find(config_values['feed_xml_child_element_name'])
 
     # return a list of all <entry> elements
-    return feed_element.find_all(feed_xml_entry_element_name)
+    return feed_element.find_all(config_values['feed_xml_entry_element_name'])
 
 
 
@@ -102,14 +118,11 @@ def ProcessBlogArchive(blog_path):
             print("in exception handler, item: " + str(index))
             continue
 
-        
-
     for en in prepared_entries:
         en.ConstructHtmlFile()
 
 def main():
- 
-    ProcessBlogArchive(local_feed_xml_path + "/" + local_feed_xml_filename)
+    ProcessBlogArchive(config_values['local_feed_xml_path'] + "/" + config_values['local_feed_xml_filename'])
 
 if __name__ == "__main__":
     main()
