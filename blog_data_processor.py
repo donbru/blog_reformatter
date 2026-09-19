@@ -59,7 +59,7 @@ Get all <entry> elements from the input feed.xml file.
 This a fixed format, no need to try to parameterize or make this configurable
 '''
 def GetEntries(blog_path):
-    with open(blog_path, 'r', encoding = config_values['feed_xml_encoding']) as f:
+    with open(blog_path, 'r', encoding=config_values['feed_xml_encoding']) as f:
         data = f.read()
 
     # extract root and first child elements
@@ -108,12 +108,15 @@ def ProcessBlogArchive(blog_path):
 
     for index, entr in enumerate(input_entries):
         try:
-            content = entr.content.text
-            title = entr.title.text
-            date_published = entr.published.text
-            reformatted_content = ReplaceImageTags(content)
+            # ignore comments
+            if (entr.find_all('blogger:type')[0].text == 'COMMENT'):
+                continue; 
 
-            prepared_entries.append(BlogEntry(title, reformatted_content, date_published))
+            # replace any img or a tags with image references to point to local storage
+            reformatted_content = ReplaceImageTags(entr.content.text)
+
+            # store blog post to be written in the next steps
+            prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, entr.published.text))
         except: #was except: TypeError, removed to help debugging
             print("in exception handler, item: " + str(index))
             continue
