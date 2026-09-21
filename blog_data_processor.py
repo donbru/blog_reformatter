@@ -3,16 +3,20 @@ from bs4 import BeautifulSoup
 from blog_entry import BlogEntry
 from pprint import pprint
 import configparser
+import os
 
 class BlogDataProcessor:
 
     def ReadConfigValues(self):
         config = configparser.ConfigParser()
         config.read('blog_data_processor.config')
+        user_profile_path = os.environ["USERPROFILE"] + "/"
+        user_profile_path = user_profile_path.replace("\\", "/")
+
         return {
-            'local_feed_xml_path' : config.get('Files', 'local_feed_xml_path'),
+            'local_feed_xml_path' : user_profile_path + config.get('Files', 'local_feed_xml_path'),
             'local_feed_xml_filename' : config.get('Files', 'local_feed_xml_filename'),
-            'local_image_path' : config.get('Files', 'local_image_path'),
+            'local_image_path' : user_profile_path + config.get('Files', 'local_image_path'),
             'feed_xml_encoding' : config.get('Input', 'feed_xml_encoding'),
             'feed_xml_root_element_name' : config.get('Input', 'feed_xml_root_element_name'),
             'feed_xml_child_element_name' : config.get('Input', 'feed_xml_child_element_name'),
@@ -39,7 +43,7 @@ class BlogDataProcessor:
             # if the attribute's value ends with an image type, get its URI
             # and change it to point to a local file instead
             if image_reference.endswith('jpg'):
-                #get file name from end, work backwards to find last /
+                #get file name from end, work backwards to find the last /
                 last_slash_index = image_reference.rfind('/')
                 new_file_name = self.config_values['local_image_path'] + image_reference[last_slash_index:len(image_reference)] 
                 return True, image_reference, new_file_name
@@ -65,16 +69,9 @@ class BlogDataProcessor:
     '''
     Replace certain markup in the original content with content that points to the local file system
     rather than Google online storage
+    Use paths in the config file to decide where the local image files reside
     '''
     def ReplaceImageTags(self, content):
-        ''' 
-        images can be found here: 
-        C:/Users/dbrue/Documents/GitHub/blog_reformatter/FullBlogDownload_Sept2026/Takeout/Blogger/Albums/The DEB Log
-        Replace image names/paths/urls
-            with this path and the final image name
-        input content <a> tags look like this: 
-        <a href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhAQXGYT0ioQlTgPx3wpPmiBmiBW57QFXyl-GH_daQ1x0OgXbtMAaO_AOKAEa1soIJ4G6FXMm173hHmqs6mL2gjlbwfDVGMUvadQy5flBCo7DIT-Ow4Zky8YNetnEKQWQ875yn7WUkK_fM/s1600/familyAugust2014.jpg" imageanchor="1" >
-        '''
 
         # read the XML file into an object using BeautifulSoup
         soup = BeautifulSoup(content, features='lxml')
@@ -100,6 +97,7 @@ class BlogDataProcessor:
         for index, entr in enumerate(input_entries):
             try:
                 # ignore comments
+                # TODO this isn't great - is there a better way to do this? 
                 if (entr.find_all('blogger:type')[0].text == 'COMMENT'):
                     continue; 
 
