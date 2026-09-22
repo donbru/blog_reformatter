@@ -7,6 +7,10 @@ import os
 
 class BlogDataProcessor:
 
+    '''
+    Read configuration values from config file. These identify the location of the 
+    exported blog content and images
+    '''
     def ReadConfigValues(self):
         config = configparser.ConfigParser()
         config.read('blog_data_processor.config')
@@ -81,6 +85,7 @@ class BlogDataProcessor:
 
         # pass each found tag into a method to locate image references, if any, and pass back the
         # appropriate local file name
+        # sort by published date so they're ordered oldest to newest
         for a_tag in relevant_tags:
             modified, image_reference, new_reference = self.FindAndReplaceImageReference(a_tag, ['href', 'src'])
             if modified:
@@ -95,22 +100,22 @@ class BlogDataProcessor:
         input_entries = self.GetEntries(blog_path)
 
         for index, entr in enumerate(input_entries):
-            try:
-                # ignore comments
-                # TODO this isn't great - is there a better way to do this? 
-                if (entr.find_all('blogger:type')[0].text == 'COMMENT'):
-                    continue; 
+            #try:
+            # ignore comments
+            # TODO this isn't great - is there a better way to do this? 
+            if (entr.find_all('blogger:type')[0].text == 'COMMENT'):
+                continue; 
 
-                # replace any img or a tags with image references to point to local storage
-                reformatted_content = self.ReplaceImageTags(entr.content.text)
+            # replace any img or a tags with image references to point to local storage
+            reformatted_content = self.ReplaceImageTags(entr.content.text)
 
-                # store blog post to be written in the next steps
-                prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, entr.published.text))
-            except: #was except: TypeError, removed to help debugging
-                print("in exception handler, item: " + str(index))
-                continue
+            # store blog post to be written in the next steps
+            prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, entr.published.text))
+            # except: #was except: TypeError, removed to help debugging
+            #     print("in exception handler, item: " + str(index))
+            #     continue
 
-        for en in prepared_entries:
+        for en in sorted(prepared_entries, key=lambda e : e.date_published):
             en.ConstructHtmlFile()
 
     def ProcessBlogArchive(self):
