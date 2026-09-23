@@ -19,11 +19,11 @@ class BlogEntry:
     Get the HTML output file name
     '''
     def GetOutputFileName(self):
-        #TODO use config values here
         target_directory = self.config_values['local_output_path']
-        input_dir = self.config_values['local_feed_xml_path']
+
         sanitized_filename = self.SanitizeFileNameSegment(self.post_title)
         full_filename = f"{target_directory}{self.formatted_date} - {sanitized_filename}.html"
+
         return full_filename
     
     '''
@@ -42,10 +42,6 @@ class BlogEntry:
 
         #replace the placeholders with content from original blog markup
         complete_html = outerHtml.replace('placeholder_title', self.post_title).replace('placeholder_content', self.content)
-
-        #TODO move this somewhere else, use config values
-        if not os.path.exists('C:/Users/dbrue/Documents/GitHub/blog_reformatter/blog_reformatter/output'):
-            os.mkdir('C:/Users/dbrue/Documents/GitHub/blog_reformatter/blog_reformatter/output')
 
         #write the HTML file
         with open(self.GetOutputFileName(), "w", encoding="utf-8") as f:

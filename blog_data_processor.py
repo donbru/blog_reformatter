@@ -68,8 +68,24 @@ class BlogDataProcessor:
         bs_data = BeautifulSoup(data, self.config_values['feed_xml_root_element_name'])
         feed_element = bs_data.find(self.config_values['feed_xml_child_element_name'])
 
-        # return a list of all <entry> elements
-        return feed_element.find_all(self.config_values['feed_xml_entry_element_name'])
+        # this list will contain valid entries once COMMENTs are filtered out
+        valid_entries = []
+
+        # return a list of all <entry> elements, exclude any comment entries
+        # I wanted to use a parameter to find_all to filter out comments automatically
+        # but had trouble figuring out the parameters to do so, and online searches
+        # didn't produce much, so I took the simpler route on the collection
+        # that find_all returned. There aren't so many blog posts that this approach would
+        # be problematic from a performance perspective.
+        for entry in feed_element.find_all(self.config_values['feed_xml_entry_element_name']):
+            #skip any COMMENT entries, they will not be preserved
+            if (entry.find_all('blogger:type')[0].text == 'COMMENT'):
+                continue; 
+            
+            valid_entries.append(entry)
+
+        return valid_entries
+
 
     '''
     Replace certain markup in the original content with content that points to the local file system
@@ -105,16 +121,15 @@ class BlogDataProcessor:
         input_entries = self.GetEntries(blog_path)
 
         for entr in input_entries:
-            # ignore comments
-            # TODO move this into GetEntries() 
-            if (entr.find_all('blogger:type')[0].text == 'COMMENT'):
-                continue; 
-
             # replace any img or a tags with image references to point to local storage
             reformatted_content = self.ReplaceImageTags(entr.content.text)
 
             # store blog post to be written in the next steps
             prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, entr.published.text))
+
+        #TODO refactor this out of this method
+        if not os.path.exists(self.config_values['local_output_path']):
+            os.mkdir(self.config_values['local_output_path'])
 
         self.ConstructHtmlFiles(prepared_entries)
 
