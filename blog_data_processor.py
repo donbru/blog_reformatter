@@ -1,8 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 from blog_entry import BlogEntry
+from blog_data_processor_config import BlogDataProcessorConfig
 from pprint import pprint
-import configparser
 import os
 
 class BlogDataProcessor:
@@ -11,24 +11,24 @@ class BlogDataProcessor:
     Read configuration values from config file. These identify the location of the 
     exported blog content and images
     '''
-    def ReadConfigValues(self):
-        config = configparser.ConfigParser()
-        config.read('blog_data_processor.config')
-        user_profile_path = os.environ["USERPROFILE"] + "/"
-        user_profile_path = user_profile_path.replace("\\", "/")
+    # def ReadConfigValues(self):
+    #     config = configparser.ConfigParser()
+    #     config.read('blog_data_processor.config')
+    #     user_profile_path = os.environ["USERPROFILE"] + "/"
+    #     user_profile_path = user_profile_path.replace("\\", "/")
 
-        return {
-            'local_feed_xml_path' : user_profile_path + config.get('Files', 'local_feed_xml_path'),
-            'local_feed_xml_filename' : config.get('Files', 'local_feed_xml_filename'),
-            'local_image_path' : user_profile_path + config.get('Files', 'local_image_path'),
-            'feed_xml_encoding' : config.get('Input', 'feed_xml_encoding'),
-            'feed_xml_root_element_name' : config.get('Input', 'feed_xml_root_element_name'),
-            'feed_xml_child_element_name' : config.get('Input', 'feed_xml_child_element_name'),
-            'feed_xml_entry_element_name' : config.get('Input', 'feed_xml_entry_element_name'),
-        }
+    #     return {
+    #         'local_feed_xml_path' : user_profile_path + config.get('Files', 'local_feed_xml_path'),
+    #         'local_feed_xml_filename' : config.get('Files', 'local_feed_xml_filename'),
+    #         'local_image_path' : user_profile_path + config.get('Files', 'local_image_path'),
+    #         'feed_xml_encoding' : config.get('Input', 'feed_xml_encoding'),
+    #         'feed_xml_root_element_name' : config.get('Input', 'feed_xml_root_element_name'),
+    #         'feed_xml_child_element_name' : config.get('Input', 'feed_xml_child_element_name'),
+    #         'feed_xml_entry_element_name' : config.get('Input', 'feed_xml_entry_element_name'),
+    #     }
 
     def __init__(self):
-        self.config_values = self.ReadConfigValues()
+        self.config_values = BlogDataProcessorConfig().config_values
 
     '''
     Find tags, given the tag name and the attribute containing a possible jpg file reference
@@ -60,7 +60,8 @@ class BlogDataProcessor:
     This a fixed format, no need to try to parameterize or make this configurable
     '''
     def GetEntries(self, blog_path):
-        with open(blog_path, 'r', encoding=self.config_values['feed_xml_encoding']) as f:
+        with open(blog_path, 'r', 
+                  encoding=self.config_values['feed_xml_encoding']) as f:
             data = f.read()
 
         # extract root and first child elements
@@ -93,16 +94,19 @@ class BlogDataProcessor:
 
         return content
 
+    def ConstructHtmlFiles(self, prepared_entries):
+        for en in sorted(prepared_entries, key=lambda e : e.date_published):
+            en.ConstructHtmlFile()
+
     def ProcessBlogArchiveFiles(self, blog_path):
  
         prepared_entries = []
 
         input_entries = self.GetEntries(blog_path)
 
-        for index, entr in enumerate(input_entries):
-            #try:
+        for entr in input_entries:
             # ignore comments
-            # TODO this isn't great - is there a better way to do this? 
+            # TODO move this into GetEntries() 
             if (entr.find_all('blogger:type')[0].text == 'COMMENT'):
                 continue; 
 
@@ -111,12 +115,8 @@ class BlogDataProcessor:
 
             # store blog post to be written in the next steps
             prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, entr.published.text))
-            # except: #was except: TypeError, removed to help debugging
-            #     print("in exception handler, item: " + str(index))
-            #     continue
 
-        for en in sorted(prepared_entries, key=lambda e : e.date_published):
-            en.ConstructHtmlFile()
+        self.ConstructHtmlFiles(prepared_entries)
 
     def ProcessBlogArchive(self):
         self.ProcessBlogArchiveFiles(self.config_values['local_feed_xml_path'] + "/" + self.config_values['local_feed_xml_filename'])

@@ -1,27 +1,30 @@
 import os
 from datetime import datetime
+from blog_data_processor_config import BlogDataProcessorConfig
 
 class BlogEntry:
     def __init__(self, post_title, content, date_published):
         self.post_title = post_title        
         self.content = content
-        self.date_published = date_published,
+        self.date_published = date_published
         self.formatted_date = self.FormatDateForOutput(date_published)
+        self.config_values = BlogDataProcessorConfig().config_values
 
     def FormatDateForOutput(self, date_published):
         date_only = date_published[:date_published.find('T')]
         dt = datetime.fromisoformat(date_only)
-        #return dt.year + '-' + dt.month + '-' + dt.day
-        return ('{0}-{1}-{2}'.format(dt.year, dt.month, dt.day))
+        return dt.strftime('%Y-%m-%d')
 
     '''
     Get the HTML output file name
     '''
     def GetOutputFileName(self):
-        return  'C:/Users/dbrue/Documents/GitHub/blog_reformatter/blog_reformatter/output/' + \
-                    self.formatted_date + \
-                    ' - ' + self.SanitizeFileNameSegment(self.post_title) + \
-                    '.html'
+        #TODO use config values here
+        target_directory = self.config_values['local_output_path']
+        input_dir = self.config_values['local_feed_xml_path']
+        sanitized_filename = self.SanitizeFileNameSegment(self.post_title)
+        full_filename = f"{target_directory}{self.formatted_date} - {sanitized_filename}.html"
+        return full_filename
     
     '''
     replace any disallowed Windows file name characters with underscores before writing a file
