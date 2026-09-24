@@ -7,8 +7,11 @@ class BlogEntry:
         self.post_title = post_title        
         self.content = content
         self.date_published = date_published
+        self.previous_post_link = None
+        self.next_post_link = None
         self.formatted_date = self.FormatDateForOutput(date_published)
         self.config_values = BlogDataProcessorConfig().config_values
+        self.current_post_link = self.GetOutputFileName()
 
     def FormatDateForOutput(self, date_published):
         date_only = date_published[:date_published.find('T')]
@@ -38,10 +41,21 @@ class BlogEntry:
     '''
     def ConstructHtmlFile(self):
         #outer HTML - generic HTML with some placeholder text
-        outerHtml = '<!DOCTYPE html><html><body><h1>placeholder_title</h1><p>placeholder_content</p></body></html>'
+        outerHtml = '<!DOCTYPE html><html><body><h1>placeholder_title</h1><p>placeholder_content</p><div>placeholder_previous</div><div>placeholder_next</div></body></html>'
 
         #replace the placeholders with content from original blog markup
-        complete_html = outerHtml.replace('placeholder_title', self.post_title).replace('placeholder_content', self.content)
+        complete_html = outerHtml.replace('placeholder_title', self.post_title).\
+            replace('placeholder_content', self.content)
+
+        if (self.previous_post_link != None):
+            complete_html = complete_html.replace('placeholder_previous', f"<a href=\"{self.previous_post_link}\">Previous</a>")
+        else:
+            complete_html = complete_html.replace('placeholder_previous', '')
+
+        if (self.next_post_link != None):
+            complete_html = complete_html.replace('placeholder_next', f"<a href=\"{self.next_post_link}\">Next</a>")
+        else:
+            complete_html = complete_html.replace('placeholder_next', '')
 
         #write the HTML file
         with open(self.GetOutputFileName(), "w", encoding="utf-8") as f:

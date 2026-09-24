@@ -7,26 +7,6 @@ import os
 
 class BlogDataProcessor:
 
-    '''
-    Read configuration values from config file. These identify the location of the 
-    exported blog content and images
-    '''
-    # def ReadConfigValues(self):
-    #     config = configparser.ConfigParser()
-    #     config.read('blog_data_processor.config')
-    #     user_profile_path = os.environ["USERPROFILE"] + "/"
-    #     user_profile_path = user_profile_path.replace("\\", "/")
-
-    #     return {
-    #         'local_feed_xml_path' : user_profile_path + config.get('Files', 'local_feed_xml_path'),
-    #         'local_feed_xml_filename' : config.get('Files', 'local_feed_xml_filename'),
-    #         'local_image_path' : user_profile_path + config.get('Files', 'local_image_path'),
-    #         'feed_xml_encoding' : config.get('Input', 'feed_xml_encoding'),
-    #         'feed_xml_root_element_name' : config.get('Input', 'feed_xml_root_element_name'),
-    #         'feed_xml_child_element_name' : config.get('Input', 'feed_xml_child_element_name'),
-    #         'feed_xml_entry_element_name' : config.get('Input', 'feed_xml_entry_element_name'),
-    #     }
-
     def __init__(self):
         self.config_values = BlogDataProcessorConfig().config_values
 
@@ -111,8 +91,19 @@ class BlogDataProcessor:
         return content
 
     def ConstructHtmlFiles(self, prepared_entries):
-        for en in sorted(prepared_entries, key=lambda e : e.date_published):
+        for en in prepared_entries:
             en.ConstructHtmlFile()
+
+    def ApplyPreviousNextLinks(self, prepared_entries):
+        #go back through all entries and add links to previous and next where available
+        for entry_index, entry in enumerate(prepared_entries):
+            if entry_index == 0:
+                entry.next_post_link = prepared_entries[1].current_post_link               
+            elif entry_index == len(prepared_entries)-1:
+                entry.previous_post_link = prepared_entries[-2].current_post_link
+            else:
+                entry.previous_post_link = prepared_entries[entry_index - 1].current_post_link
+                entry.next_post_link = prepared_entries[entry_index + 1].current_post_link
 
     def ProcessBlogArchiveFiles(self, blog_path):
  
@@ -120,12 +111,19 @@ class BlogDataProcessor:
 
         input_entries = self.GetEntries(blog_path)
 
+        # it would be nice if I could sort here, but I don't know how to do that with what
+        # is stored at the moment
         for entr in input_entries:
             # replace any img or a tags with image references to point to local storage
             reformatted_content = self.ReplaceImageTags(entr.content.text)
 
             # store blog post to be written in the next steps
-            prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, entr.published.text))
+            prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, \
+                                            entr.published.text))
+
+        prepared_entries = sorted(prepared_entries, key=lambda e : e.date_published)
+
+        self.ApplyPreviousNextLinks(prepared_entries)
 
         #TODO refactor this out of this method
         if not os.path.exists(self.config_values['local_output_path']):
