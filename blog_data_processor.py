@@ -1,27 +1,33 @@
+""" Main blog data processor """
+
+import os
+from pprint import pprint
 import requests
 from bs4 import BeautifulSoup
 from blog_entry import BlogEntry
 from blog_data_processor_config import BlogDataProcessorConfig
-from pprint import pprint
-import os
+
+
+
 
 class BlogDataProcessor:
+    """ Blog data processor object - drives blog processing"""
 
     def __init__(self):
         self.config_values = BlogDataProcessorConfig().config_values
 
-    '''
-    Find tags, given the tag name and the attribute containing a possible jpg file reference
-    Replace the jpg file URI with a local filename and return that value
-    '''
-    def FindAndReplaceImageReference(self, tag, image_tag_attribute_names):
+    def find_and_replace_image_reference(self, tag, image_tag_attribute_names):
+        '''
+        Find tags, given the tag name and the attribute containing a possible jpg file reference
+        Replace the jpg file URI with a local filename and return that value
+        '''
         for attrib_name in image_tag_attribute_names:
 
-            # extract the name of any attributes of the current tag 
+            # extract the name of any attributes of the current tag
             # that match the given attribute name
             image_reference = tag.get(attrib_name)
 
-            if image_reference == None:
+            if image_reference is None:
                 continue
 
             # if the attribute's value ends with an image type, get its URI
@@ -29,19 +35,19 @@ class BlogDataProcessor:
             if image_reference.endswith('jpg'):
                 #get file name from end, work backwards to find the last /
                 last_slash_index = image_reference.rfind('/')
-                new_file_name = self.config_values['local_image_path'] + image_reference[last_slash_index:len(image_reference)] 
+                new_file_name = self.config_values['local_image_path'] + \
+                    image_reference[last_slash_index:len(image_reference)]
                 return True, image_reference, new_file_name
 
-        # didn't do anything above or we would have returned already    
+        # didn't do anything above or we would have returned already
         return False, '', ''
 
-    '''
-    Get all <entry> elements from the input feed.xml file.
-    This a fixed format, no need to try to parameterize or make this configurable
-    '''
-    def GetEntries(self, blog_path):
-        with open(blog_path, 'r', 
-                  encoding=self.config_values['feed_xml_encoding']) as f:
+    def get_entries(self, blog_path):
+        '''
+        Get all <entry> elements from the input feed.xml file.
+        This a fixed format, no need to try to parameterize or make this configurable
+        '''
+        with open(blog_path, 'r', encoding=self.config_values['feed_xml_encoding']) as f:
             data = f.read()
 
         # extract root and first child elements
@@ -59,20 +65,20 @@ class BlogDataProcessor:
         # be problematic from a performance perspective.
         for entry in feed_element.find_all(self.config_values['feed_xml_entry_element_name']):
             #skip any COMMENT entries, they will not be preserved
-            if (entry.find_all('blogger:type')[0].text == 'COMMENT'):
-                continue; 
-            
+            if entry.find_all('blogger:type')[0].text == 'COMMENT':
+                continue
+
             valid_entries.append(entry)
 
         return valid_entries
 
 
-    '''
-    Replace certain markup in the original content with content that points to the local file system
-    rather than Google online storage
-    Use paths in the config file to decide where the local image files reside
-    '''
-    def ReplaceImageTags(self, content):
+    def replace_image_tags(self, content):
+        '''
+        Replace certain markup in the original content with content that points to 
+        the local file system rather than Google online storage
+        Use paths in the config file to decide where the local image files reside
+        '''
 
         # read the XML file into an object using BeautifulSoup
         soup = BeautifulSoup(content, features='lxml')
@@ -84,55 +90,58 @@ class BlogDataProcessor:
         # appropriate local file name
         # sort by published date so they're ordered oldest to newest
         for a_tag in relevant_tags:
-            modified, image_reference, new_reference = self.FindAndReplaceImageReference(a_tag, ['href', 'src'])
+            modified, image_reference, new_reference = \
+                self.find_and_replace_image_reference(a_tag, ['href', 'src'])
+
             if modified:
                 content = content.replace(image_reference, new_reference)
 
         return content
 
-    def ConstructHtmlFiles(self, prepared_entries):
+    def construct_html_files(self, prepared_entries):
+        """ create an html file for each of the blog entries"""
         for en in prepared_entries:
-            en.ConstructHtmlFile()
+            en.construct_html_file()
 
-    def ApplyPreviousNextLinks(self, prepared_entries):
+    def apply_previous_next_links(self, prepared_entries):
+        """ add previous/next links to each entry as appropriate"""
         #go back through all entries and add links to previous and next where available
         for entry_index, entry in enumerate(prepared_entries):
             if entry_index == 0:
-                entry.next_post_link = prepared_entries[1].current_post_link               
+                entry.next_post_link = prepared_entries[1].current_post_link
             elif entry_index == len(prepared_entries)-1:
                 entry.previous_post_link = prepared_entries[-2].current_post_link
             else:
                 entry.previous_post_link = prepared_entries[entry_index - 1].current_post_link
                 entry.next_post_link = prepared_entries[entry_index + 1].current_post_link
 
-    def ProcessBlogArchiveFiles(self, blog_path):
- 
+    def process_blog_archive_files(self, blog_path):
+        ''' main loop to process all blog archive files'''
         prepared_entries = []
 
-        input_entries = self.GetEntries(blog_path)
+        input_entries = self.get_entries(blog_path)
 
         # it would be nice if I could sort here, but I don't know how to do that with what
         # is stored at the moment
         for entr in input_entries:
             # replace any img or a tags with image references to point to local storage
-            reformatted_content = self.ReplaceImageTags(entr.content.text)
+            reformatted_content = self.replace_image_tags(entr.content.text)
 
             # store blog post to be written in the next steps
             prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, \
                                             entr.published.text))
 
-        prepared_entries = sorted(prepared_entries, key=lambda e : e.date_published)
+        #prepared_entries = sorted(prepared_entries, key=lambda e : e.date_published)
 
-        self.ApplyPreviousNextLinks(prepared_entries)
+        self.apply_previous_next_links(sorted(prepared_entries, key=lambda e : e.date_published))
 
         #TODO refactor this out of this method
         if not os.path.exists(self.config_values['local_output_path']):
             os.mkdir(self.config_values['local_output_path'])
 
-        self.ConstructHtmlFiles(prepared_entries)
+        self.construct_html_files(prepared_entries)
 
-    def ProcessBlogArchive(self):
-        self.ProcessBlogArchiveFiles(self.config_values['local_feed_xml_path'] + "/" + self.config_values['local_feed_xml_filename'])
-
-
-
+    def process_blog_archive(self):
+        ''' procress the archive files with the paths defined in the config file'''
+        self.process_blog_archive_files(self.config_values['local_feed_xml_path'] \
+                                        + "/" + self.config_values['local_feed_xml_filename'])

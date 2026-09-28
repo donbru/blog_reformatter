@@ -1,7 +1,5 @@
+""" Main program method for blog processor """
 from blog_data_processor import BlogDataProcessor
 
-def main():
-    BlogDataProcessor().ProcessBlogArchive()
-
 if __name__ == "__main__":
-    main()
+    BlogDataProcessor().process_blog_archive()
