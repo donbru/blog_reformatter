@@ -1,14 +1,9 @@
-""" Main blog data processor """
+"""  Blog Data Processor """
 
 import os
-from pprint import pprint
-import requests
 from bs4 import BeautifulSoup
 from blog_entry import BlogEntry
 from blog_data_processor_config import BlogDataProcessorConfig
-
-
-
 
 class BlogDataProcessor:
     """ Blog data processor object - drives blog processing"""
@@ -47,11 +42,14 @@ class BlogDataProcessor:
         Get all <entry> elements from the input feed.xml file.
         This a fixed format, no need to try to parameterize or make this configurable
         '''
-        with open(blog_path, 'r', encoding=self.config_values['feed_xml_encoding']) as f:
+        with open(blog_path, 'r',
+                  encoding=self.config_values['feed_xml_encoding']) as f:
             data = f.read()
 
         # extract root and first child elements
-        bs_data = BeautifulSoup(data, self.config_values['feed_xml_root_element_name'])
+        bs_data = BeautifulSoup(data)
+        bs_data.find(self.config_values['feed_xml_root_element_name'])
+        #self.config_values['feed_xml_root_element_name'])
         feed_element = bs_data.find(self.config_values['feed_xml_child_element_name'])
 
         # this list will contain valid entries once COMMENTs are filtered out
@@ -79,9 +77,9 @@ class BlogDataProcessor:
         the local file system rather than Google online storage
         Use paths in the config file to decide where the local image files reside
         '''
-
+        
         # read the XML file into an object using BeautifulSoup
-        soup = BeautifulSoup(content, features='lxml')
+        soup = BeautifulSoup(content)
 
         #if any <a> or <img> tags in the content, replace the hrefs/src of the image files
         relevant_tags = soup.find_all('a') + soup.find_all('img')
@@ -109,7 +107,7 @@ class BlogDataProcessor:
         for entry_index, entry in enumerate(prepared_entries):
             if entry_index == 0:
                 entry.next_post_link = prepared_entries[1].current_post_link
-            elif entry_index == len(prepared_entries)-1:
+            elif entry_index == len(prepared_entries) - 1:
                 entry.previous_post_link = prepared_entries[-2].current_post_link
             else:
                 entry.previous_post_link = prepared_entries[entry_index - 1].current_post_link
