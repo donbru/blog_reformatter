@@ -1,6 +1,7 @@
 """  Blog Data Processor """
 
 import os
+import html
 from bs4 import BeautifulSoup
 from blog_entry import BlogEntry
 from blog_data_processor_config import BlogDataProcessorConfig
@@ -30,8 +31,14 @@ class BlogDataProcessor:
             if image_reference.endswith('jpg'):
                 #get file name from end, work backwards to find the last /
                 last_slash_index = image_reference.rfind('/')
-                new_file_name = self.config_values['local_image_path'] + \
-                    image_reference[last_slash_index:len(image_reference)]
+
+                #HTML encode (escape) file name to sure compatibility with HTML
+                new_file_name = html.escape(self.config_values['local_image_path'] + \
+                    image_reference[last_slash_index:len(image_reference)], True)
+                new_file_name = new_file_name.replace('+', ' ')
+
+                # return tuple that indicates a change was made, the new image reference,
+                # and the new file name
                 return True, image_reference, new_file_name
 
         # didn't do anything above or we would have returned already
@@ -79,7 +86,7 @@ class BlogDataProcessor:
         '''
         
         # read the XML file into an object using BeautifulSoup
-        soup = BeautifulSoup(content)
+        soup = BeautifulSoup(content, features="lxml")
 
         #if any <a> or <img> tags in the content, replace the hrefs/src of the image files
         relevant_tags = soup.find_all('a') + soup.find_all('img')
