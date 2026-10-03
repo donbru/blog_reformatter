@@ -12,6 +12,19 @@ class BlogDataProcessor:
     def __init__(self):
         self.config_values = BlogDataProcessorConfig().config_values
 
+    def adjust_image_reference(self, image_reference):
+        '''
+        Adjust image_reference value (a URI) to point instead to a local file
+        '''
+        #get file name from end, work backwards to find the last /
+        last_slash_index = image_reference.rfind('/')
+
+        #HTML encode (escape) file name to sure compatibility with HTML
+        new_file_name = html.escape(self.config_values['local_image_path'] + \
+            image_reference[last_slash_index:len(image_reference)], True)
+                            
+        return new_file_name.replace('+', ' ')
+
     def find_and_replace_image_reference(self, tag, image_tag_attribute_names):
         '''
         Find tags, given the tag name and the attribute containing a possible jpg file reference
@@ -29,21 +42,14 @@ class BlogDataProcessor:
             # if the attribute's value ends with an image type, get its URI
             # and change it to point to a local file instead
             if image_reference.endswith('jpg'):
-                #get file name from end, work backwards to find the last /
-                last_slash_index = image_reference.rfind('/')
-
-                #HTML encode (escape) file name to sure compatibility with HTML
-                new_file_name = html.escape(self.config_values['local_image_path'] + \
-                    image_reference[last_slash_index:len(image_reference)], True)
-                new_file_name = new_file_name.replace('+', ' ')
 
                 # return tuple that indicates a change was made, the new image reference,
                 # and the new file name
-                return True, image_reference, new_file_name
+                return True, image_reference, self.adjust_image_reference(image_reference)
 
-        # didn't do anything above or we would have returned already
-        return False, '', ''
-
+            # didn't do anything above or we would have returned already
+            return False, '', ''
+        
     def get_entries(self, blog_path):
         '''
         Get all <entry> elements from the input feed.xml file.
@@ -84,7 +90,6 @@ class BlogDataProcessor:
         the local file system rather than Google online storage
         Use paths in the config file to decide where the local image files reside
         '''
-        
         # read the XML file into an object using BeautifulSoup
         soup = BeautifulSoup(content, features="lxml")
 
@@ -109,7 +114,10 @@ class BlogDataProcessor:
             en.construct_html_file()
 
     def apply_previous_next_links(self, prepared_entries):
-        """ add previous/next links to each entry as appropriate"""
+        ''' 
+        Add previous/next links to each entry as appropriate
+        '''
+
         #go back through all entries and add links to previous and next where available
         for entry_index, entry in enumerate(prepared_entries):
             if entry_index == 0:
