@@ -60,7 +60,7 @@ class BlogDataProcessor:
             data = f.read()
 
         # extract root and first child elements
-        bs_data = BeautifulSoup(data)
+        bs_data = BeautifulSoup(data, features="lxml")
         bs_data.find(self.config_values['feed_xml_root_element_name'])
         #self.config_values['feed_xml_root_element_name'])
         feed_element = bs_data.find(self.config_values['feed_xml_child_element_name'])
