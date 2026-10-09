@@ -6,6 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+# Project-specific
+CSS-Test/
+Pipfile
+Scripts/
+.vscode/
+
+
 # Distribution / packaging
 .Python
 build/
