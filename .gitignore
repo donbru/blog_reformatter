@@ -11,6 +11,7 @@ CSS-Test/
 Pipfile
 Scripts/
 .vscode/
+pyvenv.cfg
 
 
 # Distribution / packaging
