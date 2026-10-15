@@ -4,7 +4,7 @@ BlogDataProcessor tests
 from  blog_data_processor import BlogDataProcessor
 
 def test_adjust_image_reference():
-    ''' 
+    '''
     test image reference path adjustment
     '''
     bdp = BlogDataProcessor()

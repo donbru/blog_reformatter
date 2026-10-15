@@ -12,6 +12,7 @@ Pipfile
 Scripts/
 .vscode/
 pyvenv.cfg
+output/
 
 
 # Distribution / packaging
