@@ -22,7 +22,7 @@ class BlogDataProcessor:
         #HTML encode (escape) file name to sure compatibility with HTML
         new_file_name = html.escape(self.config_values['local_image_path'] + \
             image_reference[last_slash_index:len(image_reference)], True)
-                            
+        
         return new_file_name.replace('+', ' ')
 
     def find_and_replace_image_reference(self, tag, image_tag_attribute_names):
@@ -134,8 +134,8 @@ class BlogDataProcessor:
 
         input_entries = self.get_entries(blog_path)
 
-        # it would be nice if I could sort here, but I don't know how to do that with what
-        # is stored at the moment
+        # prepare and store entries in a collection for eventual 
+        # reformatting and output
         for entr in input_entries:
             # replace any img or a tags with image references to point to local storage
             reformatted_content = self.replace_image_tags(entr.content.text)
@@ -143,8 +143,6 @@ class BlogDataProcessor:
             # store blog post to be written in the next steps
             prepared_entries.append(BlogEntry(entr.title.text, reformatted_content, \
                                             entr.published.text))
-
-        #prepared_entries = sorted(prepared_entries, key=lambda e : e.date_published)
 
         self.apply_previous_next_links(sorted(prepared_entries, key=lambda e : e.date_published))
 
