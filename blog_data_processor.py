@@ -110,6 +110,11 @@ class BlogDataProcessor:
 
     def construct_html_files(self, prepared_entries):
         """ create an html file for each of the blog entries"""
+
+        # create output folder
+        if not os.path.exists(self.config_values['local_output_path']):
+            os.mkdir(self.config_values['local_output_path'])
+            
         for en in prepared_entries:
             en.construct_html_file()
 
@@ -134,7 +139,7 @@ class BlogDataProcessor:
 
         input_entries = self.get_entries(blog_path)
 
-        # prepare and store entries in a collection for eventual 
+        # prepare and store entries in a collection for eventual
         # reformatting and output
         for entr in input_entries:
             # replace any img or a tags with image references to point to local storage
@@ -145,10 +150,6 @@ class BlogDataProcessor:
                                             entr.published.text))
 
         self.apply_previous_next_links(sorted(prepared_entries, key=lambda e : e.date_published))
-
-        #TODO refactor this out of this method
-        if not os.path.exists(self.config_values['local_output_path']):
-            os.mkdir(self.config_values['local_output_path'])
 
         self.construct_html_files(prepared_entries)
 
